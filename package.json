@@ -1,0 +1,32 @@
+{
+  "name": "taskflow-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "test.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timar21/taskflow-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/timar21/taskflow-backend/issues"
+  },
+  "homepage": "https://github.com/timar21/taskflow-backend#readme",
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "nodemon --exec ts-node src/server.ts",
+    "read-users": "ts-node src/readUsers.ts"
+  }
+}
