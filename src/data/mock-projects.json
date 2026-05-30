@@ -1,0 +1,21 @@
+[
+    {
+        "id": 1,
+        "name": "Taskflow API",
+        "description": "Backend for task management",
+        "tasks": [
+            {
+                "id": 1,
+                "title": "Set up TypeScript",
+                "completed": true,
+                "assignedTo": 1
+            },
+            {
+                "id": 2,
+                "title": "Build HTTP server",
+                "completed": false,
+                "assignedTo": 2
+            }
+        ]
+    }
+]
