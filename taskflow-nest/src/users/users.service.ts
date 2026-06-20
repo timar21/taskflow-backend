@@ -1,58 +1,54 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-
-export interface User {
-    id: number;
-    name: string;
-    email: string;
-}
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
-    private users: User[] = [
-        { id: 1, name: 'Timar', email: 'timar@example.com' },
-        { id: 2, name: 'Tizazu', email: 'tizazu@example.com' },
-    ];
+    constructor(
+        @InjectRepository(User)
+        private readonly usersRepository: Repository<User>,
+    ) { }
 
     // Get all users
-    findAll(): User[] {
-        return this.users;
+    async findAll(): Promise<User[]> {
+        return this.usersRepository.find();
     }
 
     // Get one user by id
-    findOne(id: number): User {
-        const user = this.users.find(u => u.id === id);
+    async findOne(id: number): Promise<User> {
+        const user = await this.usersRepository.findOne({ where: { id } });
         if (!user) {
             throw new NotFoundException(`User with id ${id} not found`);
         }
         return user;
     }
 
+    // Find user by email (used in auth)
+    async findByEmail(email: string): Promise<User | null> {
+        return this.usersRepository.findOne({ where: { email } });
+    }
+
     // Create a new user
-    create(data: { name: string; email: string }): User {
-        const newUser: User = {
-            id: this.users.length + 1,
-            name: data.name,
-            email: data.email,
-        };
-        this.users.push(newUser);
-        return newUser;
+    async create(data: { name: string; email: string }): Promise<User> {
+        const newUser = this.usersRepository.create(data);
+        return this.usersRepository.save(newUser);
     }
 
     // Update an existing user
-    update(id: number, data: Partial<{ name: string; email: string }>): User {
-        const user = this.findOne(id);
-        if (data.name) user.name = data.name;
-        if (data.email) user.email = data.email;
-        return user;
+    async update(
+        id: number,
+        data: Partial<{ name: string; email: string }>,
+    ): Promise<User> {
+        const user = await this.findOne(id);
+        Object.assign(user, data);
+        return this.usersRepository.save(user);
     }
 
     // Delete a user
-    remove(id: number): { message: string } {
-        const index = this.users.findIndex(u => u.id === id);
-        if (index === -1) {
-            throw new NotFoundException(`User with id ${id} not found`);
-        }
-        this.users.splice(index, 1);
+    async remove(id: number): Promise<{ message: string }> {
+        const user = await this.findOne(id);
+        await this.usersRepository.remove(user);
         return { message: `User with id ${id} deleted successfully` };
     }
 }

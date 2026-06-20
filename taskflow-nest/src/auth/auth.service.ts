@@ -10,21 +10,17 @@ export class AuthService {
     ) { }
 
     async login(email: string, password: string) {
-        // Find user by email
-        const users = this.usersService.findAll();
-        const user = users.find(u => u.email === email);
+        const user = await this.usersService.findByEmail(email);
 
         if (!user) {
             throw new UnauthorizedException('Invalid email or password');
         }
 
-        // For now we use a simple password check
-        // In real apps you would hash passwords with bcrypt
+        // Simple password check for now - real apps use bcrypt
         if (password !== '123456') {
             throw new UnauthorizedException('Invalid email or password');
         }
 
-        // Generate JWT token
         const payload = {
             sub: user.id,
             email: user.email,

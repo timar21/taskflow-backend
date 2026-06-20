@@ -1,58 +1,91 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-
-export interface Project {
-    id: number;
-    name: string;
-    description: string;
-}
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
+import { Project } from './entities/project.entity';
+import { Task } from '../tasks/entities/task.entity';
 
 @Injectable()
 export class ProjectsService {
-    private projects: Project[] = [
-        { id: 1, name: 'Taskflow API', description: 'Backend for task management' },
-        { id: 2, name: 'Portfolio', description: 'Personal portfolio website' },
-    ];
+    constructor(
+        @InjectRepository(Project)
+        private readonly projectsRepository: Repository<Project>,
+        private readonly dataSource: DataSource,
+    ) { }
 
-    // Get all projects
-    findAll(): Project[] {
-        return this.projects;
+    async findAll(): Promise<Project[]> {
+        return this.projectsRepository.find({ relations: ['owner', 'tasks'] });
     }
 
-    // Get one project by id
-    findOne(id: number): Project {
-        const project = this.projects.find(p => p.id === id);
+    async findOne(id: number): Promise<Project> {
+        const project = await this.projectsRepository.findOne({
+            where: { id },
+            relations: ['owner', 'tasks'],
+        });
         if (!project) {
             throw new NotFoundException(`Project with id ${id} not found`);
         }
         return project;
     }
 
-    // Create a new project
-    create(data: { name: string; description?: string }): Project {
-        const newProject: Project = {
-            id: this.projects.length + 1,
-            name: data.name,
-            description: data.description ?? '',
-        };
-        this.projects.push(newProject);
-        return newProject;
+    async create(data: { name: string; description?: string }): Promise<Project> {
+        const newProject = this.projectsRepository.create(data);
+        return this.projectsRepository.save(newProject);
     }
 
-    // Update an existing project
-    update(id: number, data: Partial<{ name: string; description: string }>): Project {
-        const project = this.findOne(id);
-        if (data.name) project.name = data.name;
-        if (data.description) project.description = data.description;
-        return project;
+    async update(
+        id: number,
+        data: Partial<{ name: string; description: string }>,
+    ): Promise<Project> {
+        const project = await this.findOne(id);
+        Object.assign(project, data);
+        return this.projectsRepository.save(project);
     }
 
-    // Delete a project
-    remove(id: number): { message: string } {
-        const index = this.projects.findIndex(p => p.id === id);
-        if (index === -1) {
-            throw new NotFoundException(`Project with id ${id} not found`);
-        }
-        this.projects.splice(index, 1);
+    async remove(id: number): Promise<{ message: string }> {
+        const project = await this.findOne(id);
+        await this.projectsRepository.remove(project);
         return { message: `Project with id ${id} deleted successfully` };
+    }
+
+    async findAllWithTasksQueryBuilder(): Promise<Project[]> {
+        return this.projectsRepository
+            .createQueryBuilder('project')
+            .leftJoinAndSelect('project.tasks', 'task')
+            .leftJoinAndSelect('project.owner', 'owner')
+            .getMany();
+    }
+
+    async createWithFirstTask(data: {
+        name: string;
+        description?: string;
+        firstTaskTitle: string;
+    }): Promise<Project> {
+        const queryRunner = this.dataSource.createQueryRunner();
+
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const project = queryRunner.manager.create(Project, {
+                name: data.name,
+                description: data.description,
+            });
+            const savedProject = await queryRunner.manager.save(project);
+
+            const task = queryRunner.manager.create(Task, {
+                title: data.firstTaskTitle,
+                completed: false,
+                project: savedProject,
+            });
+            await queryRunner.manager.save(task);
+
+            await queryRunner.commitTransaction();
+            return savedProject;
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
     }
 }

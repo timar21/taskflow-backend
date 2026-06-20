@@ -19,7 +19,6 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
-    // GET /users/me - protected by JWT
     @UseGuards(JwtAuthGuard)
     @Get('me')
     getMe(@CurrentUser() user: any) {
@@ -27,33 +26,33 @@ export class UsersController {
     }
 
     @Get()
-    findAll(@Query('name') name?: string) {
-        const users = this.usersService.findAll();
+    async findAll(@Query('name') name?: string) {
+        const users = await this.usersService.findAll();
         if (name) {
-            return users.filter(u =>
-                u.name.toLowerCase().includes(name.toLowerCase())
+            return users.filter((u) =>
+                u.name.toLowerCase().includes(name.toLowerCase()),
             );
         }
         return users;
     }
 
     @Get(':id')
-    findOne(@Param('id') id: string) {
+    async findOne(@Param('id') id: string) {
         return this.usersService.findOne(Number(id));
     }
 
     @Post()
-    create(@Body() body: CreateUserDto) {
+    async create(@Body() body: CreateUserDto) {
         return this.usersService.create(body);
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() body: UpdateUserDto) {
+    async update(@Param('id') id: string, @Body() body: UpdateUserDto) {
         return this.usersService.update(Number(id), body);
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string) {
+    async remove(@Param('id') id: string) {
         return this.usersService.remove(Number(id));
     }
 }
