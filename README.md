@@ -22,6 +22,15 @@ full NestJS application with a modular architecture.
 - Jest (testing)
 
 ---
+## Database Choice — PostgreSQL
+
+TaskFlow uses PostgreSQL as its database for the following reasons:
+
+- TaskFlow has structured relational data: Users own Projects, Projects have Tasks, and Tasks are optionally assigned to Users. This relational structure is a perfect fit for a SQL database.
+- PostgreSQL enforces data integrity through foreign keys and constraints, which matters for a task management system where relationships between data must stay consistent.
+- PostgreSQL is reliable, open source, and widely used in production backends.
+- TypeORM has excellent support for PostgreSQL, making it easy to define entities and relationships directly in TypeScript using decorators like @OneToMany and @ManyToOne.
+- Unlike NoSQL databases such as MongoDB, which are better suited for flexible or unstructured data, PostgreSQL's schema and relational model match TaskFlow's needs more closely.
 
 ## Project Structure
 taskflow-backend/
