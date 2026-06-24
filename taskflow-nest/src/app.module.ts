@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+//import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProjectsModule } from './projects/projects.module';
@@ -9,6 +10,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { User } from './users/entities/user.entity';
 import { Project } from './projects/entities/project.entity';
 import { Task } from './tasks/entities/task.entity';
+//import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 
 @Module({
   imports: [
@@ -23,10 +25,12 @@ import { Task } from './tasks/entities/task.entity';
       autoLoadEntities: true,
       synchronize: true,
     }),
+    // MongooseModule.forRoot(process.env.MONGO_URI || ''),
     ProjectsModule,
     UsersModule,
     AuthModule,
     TasksModule,
+    //ActivityLogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
