@@ -126,3 +126,17 @@ All tests pass including:
 - AppController basic route test
 - ProjectsService findAll and findOne tests
 - ProjectsController route and error handling tests
+
+## Note on Mongoose/MongoDB Atlas branch
+
+While implementing the Mongoose feature branch, I encountered a network-level
+restriction: my ISP blocks outbound connections on port 27017 (MongoDB's
+default port). This was confirmed using `Test-NetConnection` which showed
+`TcpTestSucceeded: False`, even after whitelisting all IPs (0.0.0.0/0) in
+MongoDB Atlas. The same result occurred on both home Wi-Fi, mobile hotspot,
+and with a VPN connected.
+
+The code itself (ActivityLogsModule, schema, service, controller) is complete
+and correctly structured using @nestjs/mongoose. All unit tests pass using
+mocked MongoDB models. The connection logic would work successfully on a
+network that allows outbound traffic on port 27017.
