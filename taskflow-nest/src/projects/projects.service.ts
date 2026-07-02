@@ -43,6 +43,12 @@ export class ProjectsService {
 
     async remove(id: number): Promise<{ message: string }> {
         const project = await this.findOne(id);
+
+        // Delete related tasks first to avoid foreign key constraint violation
+        if (project.tasks && project.tasks.length > 0) {
+            await this.projectsRepository.manager.delete('tasks', { project: { id } });
+        }
+
         await this.projectsRepository.remove(project);
         return { message: `Project with id ${id} deleted successfully` };
     }

@@ -18,11 +18,12 @@ export class User {
     @Column({ unique: true })
     email: string;
 
-    // One user can own many projects
+    @Column({ default: 'user' })
+    role: string;
+
     @OneToMany(() => Project, (project) => project.owner)
     projects: Project[];
 
-    // One user can be assigned to many tasks
     @OneToMany(() => Task, (task) => task.assignedUser)
     tasks: Task[];
 }

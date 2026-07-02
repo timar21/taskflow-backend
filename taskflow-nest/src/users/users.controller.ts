@@ -8,6 +8,7 @@ import {
     Body,
     Query,
     UseGuards,
+    ParseIntPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -37,8 +38,8 @@ export class UsersController {
     }
 
     @Get(':id')
-    async findOne(@Param('id') id: string) {
-        return this.usersService.findOne(Number(id));
+    async findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.usersService.findOne(id);
     }
 
     @Post()
@@ -47,12 +48,15 @@ export class UsersController {
     }
 
     @Patch(':id')
-    async update(@Param('id') id: string, @Body() body: UpdateUserDto) {
-        return this.usersService.update(Number(id), body);
+    async update(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() body: UpdateUserDto,
+    ) {
+        return this.usersService.update(id, body);
     }
 
     @Delete(':id')
-    async remove(@Param('id') id: string) {
-        return this.usersService.remove(Number(id));
+    async remove(@Param('id', ParseIntPipe) id: number) {
+        return this.usersService.remove(id);
     }
 }
