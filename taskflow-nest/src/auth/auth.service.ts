@@ -16,7 +16,6 @@ export class AuthService {
             throw new UnauthorizedException('Invalid email or password');
         }
 
-        // Simple password check for now - real apps use bcrypt
         if (password !== '123456') {
             throw new UnauthorizedException('Invalid email or password');
         }
@@ -25,6 +24,7 @@ export class AuthService {
             sub: user.id,
             email: user.email,
             name: user.name,
+            role: user.role,
         };
 
         return {
@@ -33,6 +33,7 @@ export class AuthService {
                 id: user.id,
                 name: user.name,
                 email: user.email,
+                role: user.role,
             },
         };
     }
