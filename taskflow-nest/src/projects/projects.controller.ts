@@ -8,11 +8,14 @@ import {
     Body,
     Query,
     UseGuards,
+    ParseIntPipe,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { RolesGuard } from '../guards/roles.guard';
+import { Roles } from '../decorators/roles.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('projects')
@@ -29,14 +32,15 @@ export class ProjectsController {
         }
         return projects;
     }
+
     @Get('with-tasks/query-builder')
     async findAllWithTasksQueryBuilder() {
         return this.projectsService.findAllWithTasksQueryBuilder();
     }
 
     @Get(':id')
-    async findOne(@Param('id') id: string) {
-        return this.projectsService.findOne(Number(id));
+    async findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.projectsService.findOne(id);
     }
 
     @Post()
@@ -44,15 +48,6 @@ export class ProjectsController {
         return this.projectsService.create(body);
     }
 
-    @Patch(':id')
-    async update(@Param('id') id: string, @Body() body: UpdateProjectDto) {
-        return this.projectsService.update(Number(id), body);
-    }
-
-    @Delete(':id')
-    async remove(@Param('id') id: string) {
-        return this.projectsService.remove(Number(id));
-    }
     @Post('with-first-task')
     async createWithFirstTask(
         @Body() body: { name: string; description?: string; firstTaskTitle: string },
@@ -60,4 +55,18 @@ export class ProjectsController {
         return this.projectsService.createWithFirstTask(body);
     }
 
+    @Patch(':id')
+    async update(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() body: UpdateProjectDto,
+    ) {
+        return this.projectsService.update(id, body);
+    }
+
+    @Delete(':id')
+    @UseGuards(RolesGuard)
+    @Roles('admin')
+    async remove(@Param('id', ParseIntPipe) id: number) {
+        return this.projectsService.remove(id);
+    }
 }

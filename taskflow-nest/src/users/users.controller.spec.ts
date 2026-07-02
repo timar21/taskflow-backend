@@ -40,7 +40,7 @@ describe('UsersController', () => {
   });
 
   it('should return one user by id', async () => {
-    const user = await controller.findOne('1');
+    const user = await controller.findOne(1);
     expect(user).toBeDefined();
   });
 });

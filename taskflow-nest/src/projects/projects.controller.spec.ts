@@ -46,13 +46,13 @@ describe('ProjectsController', () => {
   });
 
   it('should return one project by id', async () => {
-    const project = await controller.findOne('1');
+    const project = await controller.findOne(1);
     expect(project).toBeDefined();
     expect(project.name).toBe('Taskflow API');
   });
 
   it('should throw NotFoundException for missing project', async () => {
     mockProjectsService.findOne.mockRejectedValueOnce(new NotFoundException());
-    await expect(controller.findOne('99')).rejects.toThrow(NotFoundException);
+    await expect(controller.findOne(99)).rejects.toThrow(NotFoundException);
   });
 });
