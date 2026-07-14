@@ -1,7 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { User } from './entities/user.entity';
+
+
+const SALT_ROUNDS = 10;
 
 @Injectable()
 export class UsersService {
@@ -24,15 +29,45 @@ export class UsersService {
         return user;
     }
 
-    // Find user by email (used in auth)
+    // Find user by email (used in auth) - no password included
     async findByEmail(email: string): Promise<User | null> {
         return this.usersRepository.findOne({ where: { email } });
     }
 
-    // Create a new user
-    async create(data: { name: string; email: string }): Promise<User> {
-        const newUser = this.usersRepository.create(data);
+    // Find user by email including the hashed password (password column has select:false)
+    async findByEmailWithPassword(email: string): Promise<User | null> {
+        return this.usersRepository
+            .createQueryBuilder('user')
+            .addSelect('user.password')
+            .where('user.email = :email', { email })
+            .getOne();
+    }
+
+    // Get one user by id including the hashed refresh token (for validating refresh requests)
+    async findOneWithRefreshToken(id: number): Promise<User | null> {
+        return this.usersRepository
+            .createQueryBuilder('user')
+            .addSelect('user.hashedRefreshToken')
+            .where('user.id = :id', { id })
+            .getOne();
+    }
+
+    // Create a new user (password is hashed before storage)
+    async create(data: { name: string; email: string; password: string }): Promise<User> {
+        const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
+        const newUser = this.usersRepository.create({
+            ...data,
+            password: hashedPassword,
+        });
         return this.usersRepository.save(newUser);
+    }
+
+    // Store the hashed refresh token for a user (called on login/refresh)
+    async setHashedRefreshToken(userId: number, refreshToken: string | null): Promise<void> {
+        const hashedRefreshToken = refreshToken
+            ? await bcrypt.hash(crypto.createHash('sha256').update(refreshToken).digest('hex'), SALT_ROUNDS)
+            : null;
+        await this.usersRepository.update(userId, { hashedRefreshToken });
     }
 
     // Update an existing user

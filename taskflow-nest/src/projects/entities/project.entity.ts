@@ -11,19 +11,19 @@ import { Task } from '../../tasks/entities/task.entity';
 @Entity('projects')
 export class Project {
     @PrimaryGeneratedColumn()
-    id: number;
+    id!: number;
 
     @Column()
-    name: string;
+    name!: string;
 
     @Column({ nullable: true })
-    description: string;
+    description!: string;
 
     // Many projects belong to one owner (User)
     @ManyToOne(() => User, (user) => user.projects)
-    owner: User;
+    owner!: User;
 
     // One project has many tasks
     @OneToMany(() => Task, (task) => task.project)
-    tasks: Task[];
+    tasks!: Task[];
 }

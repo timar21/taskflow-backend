@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { ForbiddenException } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { Project } from './entities/project.entity';
 
@@ -8,10 +9,15 @@ describe('ProjectsService', () => {
   let service: ProjectsService;
   let repo: Repository<Project>;
 
+  const adminUser = { id: 99, role: 'admin' };
+  const ownerUser = { id: 1, role: 'user' };
+  const otherUser = { id: 2, role: 'user' };
+
   const mockProject = {
     id: 1,
     name: 'Taskflow API',
     description: 'Backend for task management',
+    owner: { id: 1 },
   };
 
   const mockRepository = {
@@ -27,6 +33,12 @@ describe('ProjectsService', () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+    mockRepository.find.mockResolvedValue([mockProject]);
+    mockRepository.findOne.mockResolvedValue(mockProject);
+    mockRepository.create.mockReturnValue(mockProject);
+    mockRepository.save.mockResolvedValue(mockProject);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProjectsService,
@@ -49,10 +61,18 @@ describe('ProjectsService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should return all projects', async () => {
-    const projects = await service.findAll();
+  it('should return all projects for an admin', async () => {
+    const projects = await service.findAll(adminUser);
     expect(projects).toHaveLength(1);
-    expect(projects[0].name).toBe('Taskflow API');
+    expect(mockRepository.find).toHaveBeenCalledWith({ relations: ['owner', 'tasks'] });
+  });
+
+  it('should scope results to owned projects for a regular user', async () => {
+    await service.findAll(ownerUser);
+    expect(mockRepository.find).toHaveBeenCalledWith({
+      where: { owner: { id: ownerUser.id } },
+      relations: ['owner', 'tasks'],
+    });
   });
 
   it('should return one project by id', async () => {
@@ -64,5 +84,41 @@ describe('ProjectsService', () => {
   it('should throw NotFoundException for non-existent id', async () => {
     mockRepository.findOne.mockResolvedValueOnce(null);
     await expect(service.findOne(99)).rejects.toThrow();
+  });
+
+  it('should allow the owner to access their own project', async () => {
+    await expect(service.findOne(1, ownerUser)).resolves.toEqual(mockProject);
+  });
+
+  it('should forbid a non-owner regular user from accessing the project', async () => {
+    await expect(service.findOne(1, otherUser)).rejects.toThrow(ForbiddenException);
+  });
+
+  it('should let an admin create a project owned by themself when ownerId is omitted', async () => {
+    await service.create({ name: 'New Project' }, adminUser);
+    expect(mockRepository.create).toHaveBeenCalledWith({
+      name: 'New Project',
+      owner: { id: adminUser.id },
+    });
+  });
+
+  it('should let an admin assign a project to a specific owner', async () => {
+    await service.create({ name: 'New Project', ownerId: 5 }, adminUser);
+    expect(mockRepository.create).toHaveBeenCalledWith({
+      name: 'New Project',
+      owner: { id: 5 },
+    });
+  });
+
+  it('should let the owner update their own project', async () => {
+    await expect(
+      service.update(1, { name: 'Updated' }, ownerUser),
+    ).resolves.toBeDefined();
+  });
+
+  it('should forbid a non-owner from updating the project', async () => {
+    await expect(
+      service.update(1, { name: 'Updated' }, otherUser),
+    ).rejects.toThrow(ForbiddenException);
   });
 });

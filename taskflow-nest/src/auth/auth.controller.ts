@@ -1,23 +1,35 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { IsNotEmpty, IsString } from 'class-validator';
 import { AuthService } from './auth.service';
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { LocalAuthGuard } from '../guards/local-auth.guard';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { CurrentUser } from '../decorators/current-user.decorator';
 
-export class LoginDto {
-    @IsEmail({}, { message: 'Email must be valid' })
-    @IsNotEmpty({ message: 'Email is required' })
-    email!: string;
-
+export class RefreshTokenDto {
     @IsString()
-    @IsNotEmpty({ message: 'Password is required' })
-    password!: string;
+    @IsNotEmpty({ message: 'Refresh token is required' })
+    refreshToken!: string;
 }
 
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
+    // LocalStrategy runs first (validates email/password), req.user is the safe user it returns
+    @UseGuards(LocalAuthGuard)
     @Post('login')
-    login(@Body() body: LoginDto) {
-        return this.authService.login(body.email, body.password);
+    login(@Request() req: any) {
+        return this.authService.login(req.user);
+    }
+
+    @Post('refresh')
+    refresh(@Body() body: RefreshTokenDto) {
+        return this.authService.refreshTokens(body.refreshToken);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('logout')
+    logout(@CurrentUser() user: { id: number }) {
+        return this.authService.logout(user.id);
     }
 }
