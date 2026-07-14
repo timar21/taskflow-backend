@@ -10,19 +10,19 @@ import { User } from '../../users/entities/user.entity';
 @Entity('tasks')
 export class Task {
     @PrimaryGeneratedColumn()
-    id: number;
+    id!: number;
 
     @Column()
-    title: string;
+    title!: string;
 
     @Column({ default: false })
-    completed: boolean;
+    completed!: boolean;
 
     // Many tasks belong to one project
     @ManyToOne(() => Project, (project) => project.tasks)
-    project: Project;
+    project!: Project;
 
     // Many tasks can be assigned to one user (optional)
     @ManyToOne(() => User, (user) => user.tasks, { nullable: true })
-    assignedUser: User;
+    assignedUser!: User;
 }

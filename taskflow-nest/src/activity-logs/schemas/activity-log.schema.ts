@@ -4,7 +4,7 @@ import { Document } from 'mongoose';
 @Schema({ timestamps: true })
 export class ActivityLog extends Document {
     @Prop({ required: true })
-    action: string;
+    action!: string;
 
     @Prop()
     details?: string;
