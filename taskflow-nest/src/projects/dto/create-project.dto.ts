@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt } from 'class-validator';
 
 export class CreateProjectDto {
     @IsString()
@@ -8,4 +8,9 @@ export class CreateProjectDto {
     @IsString()
     @IsOptional()
     description?: string;
+
+    // Admin-only: assign the project to a specific user. Defaults to the creating admin if omitted.
+    @IsInt()
+    @IsOptional()
+    ownerId?: number;
 }
