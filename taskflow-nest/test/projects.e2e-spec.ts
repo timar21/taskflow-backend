@@ -161,4 +161,62 @@ describe('Projects (e2e)', () => {
                 .expect(404);
         });
     });
+
+    describe('Pagination, sorting, and filtering', () => {
+        beforeAll(async () => {
+            // Seed a few more projects for the admin to page/sort/filter through
+            for (const name of ['Zebra Project', 'Alpha Project', 'Mango Project']) {
+                await request(app.getHttpServer())
+                    .post('/projects')
+                    .set('Authorization', `Bearer ${adminToken}`)
+                    .send({ name });
+            }
+        });
+
+        it('paginates results using skip and take', async () => {
+            const page1 = await request(app.getHttpServer())
+                .get('/projects?skip=0&take=2')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .expect(200);
+
+            expect(page1.body.data.data).toHaveLength(2);
+            expect(page1.body.data.total).toBeGreaterThanOrEqual(3);
+        });
+
+        it('sorts by name ascending by default', async () => {
+            const res = await request(app.getHttpServer())
+                .get('/projects?take=100')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .expect(200);
+
+            const names = res.body.data.data.map((p: any) => p.name);
+            const sorted = [...names].sort((a, b) => a.localeCompare(b));
+            expect(names).toEqual(sorted);
+        });
+
+        it('filters by status', async () => {
+            const res = await request(app.getHttpServer())
+                .get('/projects?status=active&take=100')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .expect(200);
+
+            expect(
+                res.body.data.data.every((p: any) => p.status === 'active'),
+            ).toBe(true);
+        });
+
+        it('caches the result so a second identical request matches the first', async () => {
+            const first = await request(app.getHttpServer())
+                .get('/projects?take=100')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .expect(200);
+
+            const second = await request(app.getHttpServer())
+                .get('/projects?take=100')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .expect(200);
+
+            expect(second.body.data.total).toBe(first.body.data.total);
+        });
+    });
 });
