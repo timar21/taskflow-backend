@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
 import { CurrentUser } from '../decorators/current-user.decorator';
-
+import { FindProjectsDto } from './dto/find-projects.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('projects')
 export class ProjectsController {
@@ -27,15 +27,9 @@ export class ProjectsController {
     @Get()
     async findAll(
         @CurrentUser() user: { id: number; role: string },
-        @Query('name') name?: string,
+        @Query() query: FindProjectsDto,
     ) {
-        const projects = await this.projectsService.findAll(user);
-        if (name) {
-            return projects.filter((p) =>
-                p.name.toLowerCase().includes(name.toLowerCase()),
-            );
-        }
-        return projects;
+        return this.projectsService.findAll(user, query);
     }
 
     @Get('with-tasks/query-builder')

@@ -16,7 +16,7 @@ describe('ProjectsController', () => {
   };
 
   const mockProjectsService = {
-    findAll: jest.fn().mockResolvedValue([mockProject]),
+    findAll: jest.fn().mockResolvedValue({ data: [mockProject], total: 1, skip: 0, take: 20 }),
     findOne: jest.fn().mockResolvedValue(mockProject),
     create: jest.fn().mockResolvedValue(mockProject),
     update: jest.fn().mockResolvedValue(mockProject),
@@ -43,10 +43,12 @@ describe('ProjectsController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should return all projects for the current user', async () => {
-    const projects = await controller.findAll(regularUser);
-    expect(projects).toHaveLength(1);
-    expect(mockProjectsService.findAll).toHaveBeenCalledWith(regularUser);
+  it('should return a paginated list of projects for the current user', async () => {
+    const query = {};
+    const result = await controller.findAll(regularUser, query);
+    expect(result.data).toHaveLength(1);
+    expect(result.total).toBe(1);
+    expect(mockProjectsService.findAll).toHaveBeenCalledWith(regularUser, query);
   });
 
   it('should return one project by id', async () => {
