@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
 import { Project } from '../projects/entities/project.entity';
 import { User } from '../users/entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class TasksService {
@@ -14,6 +15,7 @@ export class TasksService {
         private readonly projectsRepository: Repository<Project>,
         @InjectRepository(User)
         private readonly usersRepository: Repository<User>,
+        private readonly notificationsService: NotificationsService,
     ) { }
 
     async findAll(): Promise<Task[]> {
@@ -61,7 +63,13 @@ export class TasksService {
             assignedUser: assignedUser ?? undefined,
         });
 
-        return this.tasksRepository.save(newTask);
+        const savedTask = await this.tasksRepository.save(newTask);
+
+        if (assignedUser) {
+            await this.notifyTaskAssigned(savedTask, assignedUser);
+        }
+
+        return savedTask;
     }
 
     async update(
@@ -73,7 +81,13 @@ export class TasksService {
         if (data.title) task.title = data.title;
         if (data.completed !== undefined) task.completed = data.completed;
 
+        let newlyAssignedUser: User | null = null;
+
         if (data.assignedUserId) {
+            // Only notify when the assignment actually changes — re-saving the
+            // same assignee on every unrelated update would spam the queue.
+            const isReassignment = task.assignedUser?.id !== data.assignedUserId;
+
             const assignedUser = await this.usersRepository.findOne({
                 where: { id: data.assignedUserId },
             });
@@ -81,9 +95,31 @@ export class TasksService {
                 throw new NotFoundException(`User with id ${data.assignedUserId} not found`);
             }
             task.assignedUser = assignedUser;
+
+            if (isReassignment) {
+                newlyAssignedUser = assignedUser;
+            }
         }
 
-        return this.tasksRepository.save(task);
+        const savedTask = await this.tasksRepository.save(task);
+
+        if (newlyAssignedUser) {
+            await this.notifyTaskAssigned(savedTask, newlyAssignedUser);
+        }
+
+        return savedTask;
+    }
+
+    // Queues a background email job rather than sending inline — a slow or
+    // failing email provider should never block or fail the task request itself.
+    private async notifyTaskAssigned(task: Task, user: User): Promise<void> {
+        await this.notificationsService.queueTaskAssignedEmail({
+            userId: user.id,
+            userEmail: user.email,
+            userName: user.name,
+            taskId: task.id,
+            taskTitle: task.title,
+        });
     }
 
     async remove(id: number): Promise<{ message: string }> {
