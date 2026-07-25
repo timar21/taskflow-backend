@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bull';
 import { ProjectsModule } from '../../src/projects/projects.module';
 import { UsersModule } from '../../src/users/users.module';
 import { AuthModule } from '../../src/auth/auth.module';
@@ -12,6 +13,11 @@ import { Task } from '../../src/tasks/entities/task.entity';
 // Mirrors AppModule, but points TypeORM at an in-memory SQLite database
 // instead of Postgres, so e2e tests never touch real dev/prod data and
 // each test run starts from a clean, empty schema.
+//
+// TasksModule depends on NotificationsModule, which registers a Bull queue —
+// that queue needs a real Redis connection to initialize, so e2e tests that
+// touch tasks require Redis running (e.g. via `docker run ... redis:latest`,
+// same container used in dev). REDIS_HOST/REDIS_PORT come from .env.test.
 @Module({
     imports: [
         ConfigModule.forRoot({
@@ -24,6 +30,16 @@ import { Task } from '../../src/tasks/entities/task.entity';
             entities: [User, Project, Task],
             synchronize: true,
             dropSchema: true,
+        }),
+        BullModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => ({
+                redis: {
+                    host: configService.get<string>('REDIS_HOST') ?? 'localhost',
+                    port: Number(configService.get<string>('REDIS_PORT') ?? '6379'),
+                },
+            }),
         }),
         ProjectsModule,
         UsersModule,
