@@ -1,20 +1,49 @@
-import { HttpException } from '@nestjs/common';
+import { HttpException, RequestTimeoutException, ServiceUnavailableException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timer } from 'rxjs';
+import { retry, timeout } from 'rxjs/operators';
 
-// Sends a message and waits for the reply, same as calling
-// firstValueFrom(client.send(...)) directly — except it also converts a
-// { status, message } error (thrown by RpcExceptionFilter on the service
-// side) back into a real NestJS HttpException, so a 404 from user-service
-// actually reaches the browser as a 404, not a generic 500.
+const MAX_RETRIES = 3;
+const INITIAL_DELAY_MS = 500;
+const RESPONSE_TIMEOUT_MS = 5000;
+
+// A {status, message} error is a real business error produced by the
+// service's own RpcExceptionFilter (404 not found, 403 forbidden, 409
+// conflict, etc.) — retrying won't change that answer, so it's surfaced
+// immediately. Anything else — connection refused, no response in time —
+// is treated as transient and retried with exponential backoff (500ms,
+// 1000ms, 2000ms) before finally giving up.
+function isBusinessError(error: unknown): error is { status: number; message: string } {
+    return typeof error === 'object' && error !== null && 'status' in error;
+}
+
 export async function sendRpc<T>(
     client: ClientProxy,
     pattern: string,
     data: unknown,
 ): Promise<T> {
     try {
-        return await firstValueFrom(client.send<T>(pattern, data));
+        return await firstValueFrom(
+            client.send<T>(pattern, data).pipe(
+                timeout(RESPONSE_TIMEOUT_MS),
+                retry({
+                    count: MAX_RETRIES,
+                    delay: (error, retryCount) => {
+                        if (isBusinessError(error)) {
+                            throw error;
+                        }
+                        return timer(INITIAL_DELAY_MS * 2 ** (retryCount - 1));
+                    },
+                }),
+            ),
+        );
     } catch (error: any) {
-        throw new HttpException(error?.message ?? 'Internal server error', error?.status ?? 500);
+        if (isBusinessError(error)) {
+            throw new HttpException(error.message ?? 'Internal server error', error.status ?? 500);
+        }
+        if (error?.name === 'TimeoutError') {
+            throw new RequestTimeoutException('The service did not respond in time');
+        }
+        throw new ServiceUnavailableException('Service temporarily unavailable, please try again');
     }
 }

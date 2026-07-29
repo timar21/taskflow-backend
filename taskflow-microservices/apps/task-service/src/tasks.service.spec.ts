@@ -23,6 +23,10 @@ describe('TasksService', () => {
         findOne: jest.fn().mockResolvedValue(mockProject),
     };
 
+    const mockNotificationServiceClient = {
+        emit: jest.fn(),
+    };
+
     beforeEach(async () => {
         jest.clearAllMocks();
         mockTaskRepository.findOne.mockResolvedValue(mockTask);
@@ -34,6 +38,7 @@ describe('TasksService', () => {
                 TasksService,
                 { provide: getRepositoryToken(Task), useValue: mockTaskRepository },
                 { provide: getRepositoryToken(Project), useValue: mockProjectRepository },
+                { provide: 'NOTIFICATION_SERVICE', useValue: mockNotificationServiceClient },
             ],
         }).compile();
         service = module.get<TasksService>(TasksService);
@@ -46,6 +51,14 @@ describe('TasksService', () => {
     it('findOne should throw NotFoundException for a missing task', async () => {
         mockTaskRepository.findOne.mockResolvedValueOnce(null);
         await expect(service.findOne(99)).rejects.toThrow(NotFoundException);
+    });
+
+    it('findAllForUser should filter by assignedUserId', async () => {
+        await service.findAllForUser(7);
+        expect(mockTaskRepository.find).toHaveBeenCalledWith({
+            where: { assignedUserId: 7 },
+            relations: { project: true },
+        });
     });
 
     it('create should throw NotFoundException for a missing project', async () => {
@@ -62,6 +75,17 @@ describe('TasksService', () => {
             completed: false,
             project: mockProject,
             assignedUserId: undefined,
+        });
+    });
+
+    it('create should emit a task_created event after saving', async () => {
+        mockTaskRepository.save.mockResolvedValueOnce({ ...mockTask, assignedUserId: 5 });
+        await service.create({ title: 'New Task', projectId: 1, assignedUserId: 5 });
+        expect(mockNotificationServiceClient.emit).toHaveBeenCalledWith('task_created', {
+            taskId: mockTask.id,
+            title: mockTask.title,
+            projectId: mockProject.id,
+            assignedUserId: 5,
         });
     });
 });

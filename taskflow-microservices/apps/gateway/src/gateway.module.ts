@@ -23,7 +23,16 @@ import { RolesGuard } from './guards/roles.guard';
         options: {
           urls: ['amqp://localhost:5672'],
           queue: 'user_queue',
-          queueOptions: { durable: false },
+          // Must match user-service's own queue arguments exactly — RabbitMQ
+          // rejects any party that tries to (re)declare an existing queue
+          // with different arguments than the ones it was created with.
+          queueOptions: {
+            durable: false,
+            arguments: {
+              'x-dead-letter-exchange': 'dlx',
+              'x-dead-letter-routing-key': 'user_queue.dead',
+            },
+          },
         },
       },
       {
@@ -32,7 +41,13 @@ import { RolesGuard } from './guards/roles.guard';
         options: {
           urls: ['amqp://localhost:5672'],
           queue: 'task_queue',
-          queueOptions: { durable: false },
+          queueOptions: {
+            durable: false,
+            arguments: {
+              'x-dead-letter-exchange': 'dlx',
+              'x-dead-letter-routing-key': 'task_queue.dead',
+            },
+          },
         },
       },
     ]),

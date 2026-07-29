@@ -1,17 +1,15 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { Transport, MicroserviceOptions } from '@nestjs/microservices';
-import { TaskServiceModule } from './task-service.module';
-import { RpcExceptionFilter } from './rpc-exception.filter';
+import { NotificationServiceModule } from './notification-service.module';
 import { RmqAckInterceptor } from './rmq-ack.interceptor';
 import { setupDeadLetterQueue } from './setup-rabbitmq-topology';
 
-const QUEUE_NAME = 'task_queue';
+const QUEUE_NAME = 'notification_queue';
 
 async function bootstrap() {
   await setupDeadLetterQueue(QUEUE_NAME);
 
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(TaskServiceModule, {
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(NotificationServiceModule, {
     transport: Transport.RMQ,
     options: {
       urls: ['amqp://localhost:5672'],
@@ -26,10 +24,8 @@ async function bootstrap() {
       },
     },
   });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.useGlobalFilters(new RpcExceptionFilter());
   app.useGlobalInterceptors(new RmqAckInterceptor());
   await app.listen();
-  console.log('task-service is listening for messages on task_queue');
+  console.log('notification-service is listening for events on notification_queue');
 }
 bootstrap();
