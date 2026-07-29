@@ -17,6 +17,11 @@ export class TasksMessageController {
         return this.tasksService.findOne(data.id);
     }
 
+    @MessagePattern('get_tasks')
+    getTasksForUser(@Payload() data: { userId: number }) {
+        return this.tasksService.findAllForUser(data.userId);
+    }
+
     @MessagePattern('create_task')
     create(@Payload() data: CreateTaskDto) {
         return this.tasksService.create(data);

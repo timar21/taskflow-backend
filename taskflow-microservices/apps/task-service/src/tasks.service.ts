@@ -1,14 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ClientProxy } from '@nestjs/microservices';
 import { Task } from './entities/task.entity';
 import { Project } from './entities/project.entity';
 
-// Notification-on-assignment (Week 10's Bull queue) is intentionally left
-// out of this first pass — it depended on looking up the assigned user's
-// email, which now lives in a different service's database. Reintroducing
-// it means task-service asking user-service (via RabbitMQ) for that user's
-// details before queuing the email. Good next slice once this is stable.
 @Injectable()
 export class TasksService {
     constructor(
@@ -16,10 +12,21 @@ export class TasksService {
         private readonly tasksRepository: Repository<Task>,
         @InjectRepository(Project)
         private readonly projectsRepository: Repository<Project>,
+        @Inject('NOTIFICATION_SERVICE')
+        private readonly notificationServiceClient: ClientProxy,
     ) { }
 
     async findAll(): Promise<Task[]> {
         return this.tasksRepository.find({ relations: { project: true } });
+    }
+
+    // Returns tasks assigned to a specific user — used by GET /tasks/mine
+    // in the gateway, so a user can see just their own work.
+    async findAllForUser(userId: number): Promise<Task[]> {
+        return this.tasksRepository.find({
+            where: { assignedUserId: userId },
+            relations: { project: true },
+        });
     }
 
     async findOne(id: number): Promise<Task> {
@@ -50,7 +57,20 @@ export class TasksService {
             project,
             assignedUserId: data.assignedUserId,
         });
-        return this.tasksRepository.save(newTask);
+        const savedTask = await this.tasksRepository.save(newTask);
+
+        // Fire-and-forget — the caller doesn't wait for this and a failure
+        // here should never fail the task creation itself. emit() (not
+        // send()) is the event pattern: no reply is expected, unlike the
+        // request/response send() calls used for CRUD.
+        this.notificationServiceClient.emit('task_created', {
+            taskId: savedTask.id,
+            title: savedTask.title,
+            projectId: project.id,
+            assignedUserId: savedTask.assignedUserId,
+        });
+
+        return savedTask;
     }
 
     async update(

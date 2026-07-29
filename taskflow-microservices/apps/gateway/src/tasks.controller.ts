@@ -12,6 +12,7 @@ import {
 import { ClientProxy } from '@nestjs/microservices';
 import { sendRpc } from './send-rpc';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -21,6 +22,12 @@ export class GatewayTasksController {
     @Get()
     async findAll() {
         return sendRpc(this.taskServiceClient, 'find_all_tasks', {});
+    }
+
+    // Must come before @Get(':id') — otherwise "mine" would be captured as an :id value
+    @Get('mine')
+    async findMine(@CurrentUser() currentUser: { id: number }) {
+        return sendRpc(this.taskServiceClient, 'get_tasks', { userId: currentUser.id });
     }
 
     @Get(':id')
