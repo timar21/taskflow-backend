@@ -10,13 +10,13 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { ProjectMessagePatterns } from '@app/shared';
+import type { RequestUser } from '@app/shared';
 import { sendRpc } from './send-rpc';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
-
-type RequestUser = { id: number; role: string };
 
 @UseGuards(JwtAuthGuard)
 @Controller('projects')
@@ -25,12 +25,15 @@ export class GatewayProjectsController {
 
     @Get()
     async findAll(@CurrentUser() currentUser: RequestUser) {
-        return sendRpc(this.taskServiceClient, 'find_all_projects', { currentUser });
+        return sendRpc(this.taskServiceClient, ProjectMessagePatterns.FIND_ALL_PROJECTS, { currentUser });
     }
 
     @Get(':id')
     async findOne(@Param('id') id: string, @CurrentUser() currentUser: RequestUser) {
-        return sendRpc(this.taskServiceClient, 'find_project_by_id', { id: Number(id), currentUser });
+        return sendRpc(this.taskServiceClient, ProjectMessagePatterns.FIND_PROJECT_BY_ID, {
+            id: Number(id),
+            currentUser,
+        });
     }
 
     @Post()
@@ -40,7 +43,10 @@ export class GatewayProjectsController {
         @Body() body: { name: string; description?: string; ownerId?: number },
         @CurrentUser() currentUser: RequestUser,
     ) {
-        return sendRpc(this.taskServiceClient, 'create_project', { ...body, currentUser });
+        return sendRpc(this.taskServiceClient, ProjectMessagePatterns.CREATE_PROJECT, {
+            ...body,
+            currentUser,
+        });
     }
 
     @Patch(':id')
@@ -49,7 +55,7 @@ export class GatewayProjectsController {
         @Body() body: { name?: string; description?: string },
         @CurrentUser() currentUser: RequestUser,
     ) {
-        return sendRpc(this.taskServiceClient, 'update_project', {
+        return sendRpc(this.taskServiceClient, ProjectMessagePatterns.UPDATE_PROJECT, {
             id: Number(id),
             ...body,
             currentUser,
@@ -60,6 +66,9 @@ export class GatewayProjectsController {
     @UseGuards(RolesGuard)
     @Roles('admin')
     async remove(@Param('id') id: string, @CurrentUser() currentUser: RequestUser) {
-        return sendRpc(this.taskServiceClient, 'delete_project', { id: Number(id), currentUser });
+        return sendRpc(this.taskServiceClient, ProjectMessagePatterns.DELETE_PROJECT, {
+            id: Number(id),
+            currentUser,
+        });
     }
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { QueueNames, buildDeadLetterQueueOptions } from '@app/shared';
 import { GatewayController } from './gateway.controller';
 import { GatewayAuthController } from './auth.controller';
 import { GatewayProjectsController } from './projects.controller';
@@ -22,17 +23,11 @@ import { RolesGuard } from './guards/roles.guard';
         transport: Transport.RMQ,
         options: {
           urls: ['amqp://localhost:5672'],
-          queue: 'user_queue',
+          queue: QueueNames.USER_QUEUE,
           // Must match user-service's own queue arguments exactly — RabbitMQ
           // rejects any party that tries to (re)declare an existing queue
           // with different arguments than the ones it was created with.
-          queueOptions: {
-            durable: false,
-            arguments: {
-              'x-dead-letter-exchange': 'dlx',
-              'x-dead-letter-routing-key': 'user_queue.dead',
-            },
-          },
+          queueOptions: buildDeadLetterQueueOptions(QueueNames.USER_QUEUE),
         },
       },
       {
@@ -40,14 +35,8 @@ import { RolesGuard } from './guards/roles.guard';
         transport: Transport.RMQ,
         options: {
           urls: ['amqp://localhost:5672'],
-          queue: 'task_queue',
-          queueOptions: {
-            durable: false,
-            arguments: {
-              'x-dead-letter-exchange': 'dlx',
-              'x-dead-letter-routing-key': 'task_queue.dead',
-            },
-          },
+          queue: QueueNames.TASK_QUEUE,
+          queueOptions: buildDeadLetterQueueOptions(QueueNames.TASK_QUEUE),
         },
       },
     ]),

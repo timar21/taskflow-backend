@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { UserMessagePatterns } from '@app/shared';
 import { sendRpc } from './send-rpc';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -20,7 +21,7 @@ export class GatewayController {
 
   @Get()
   async findAll() {
-    return sendRpc(this.userServiceClient, 'find_all_users', {});
+    return sendRpc(this.userServiceClient, UserMessagePatterns.FIND_ALL_USERS, {});
   }
 
   // Must come before @Get(':id') — otherwise "me" would be captured as an :id value
@@ -32,21 +33,21 @@ export class GatewayController {
 
   @Get(':id')
   async getUser(@Param('id') id: string) {
-    return sendRpc(this.userServiceClient, 'find_user_by_id', { id: Number(id) });
+    return sendRpc(this.userServiceClient, UserMessagePatterns.FIND_USER_BY_ID, { id: Number(id) });
   }
 
   @Post()
   async create(@Body() body: { name: string; email: string; password: string }) {
-    return sendRpc(this.userServiceClient, 'create_user', body);
+    return sendRpc(this.userServiceClient, UserMessagePatterns.CREATE_USER, body);
   }
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() body: { name?: string; email?: string }) {
-    return sendRpc(this.userServiceClient, 'update_user', { id: Number(id), ...body });
+    return sendRpc(this.userServiceClient, UserMessagePatterns.UPDATE_USER, { id: Number(id), ...body });
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    return sendRpc(this.userServiceClient, 'delete_user', { id: Number(id) });
+    return sendRpc(this.userServiceClient, UserMessagePatterns.DELETE_USER, { id: Number(id) });
   }
 }

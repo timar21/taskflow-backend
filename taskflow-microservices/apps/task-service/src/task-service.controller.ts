@@ -1,22 +1,23 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { ProjectsService, RequestUser } from './projects.service';
+import { ProjectMessagePatterns, RequestUser } from '@app/shared';
+import { ProjectsService } from './projects.service';
 
 @Controller()
 export class TaskServiceController {
   constructor(private readonly projectsService: ProjectsService) { }
 
-  @MessagePattern('find_all_projects')
+  @MessagePattern(ProjectMessagePatterns.FIND_ALL_PROJECTS)
   findAll(@Payload() data: { currentUser: RequestUser }) {
     return this.projectsService.findAll(data.currentUser);
   }
 
-  @MessagePattern('find_project_by_id')
+  @MessagePattern(ProjectMessagePatterns.FIND_PROJECT_BY_ID)
   findOne(@Payload() data: { id: number; currentUser?: RequestUser }) {
     return this.projectsService.findOne(data.id, data.currentUser);
   }
 
-  @MessagePattern('create_project')
+  @MessagePattern(ProjectMessagePatterns.CREATE_PROJECT)
   create(
     @Payload()
     data: {
@@ -30,7 +31,7 @@ export class TaskServiceController {
     return this.projectsService.create(rest, currentUser);
   }
 
-  @MessagePattern('update_project')
+  @MessagePattern(ProjectMessagePatterns.UPDATE_PROJECT)
   update(
     @Payload()
     data: { id: number; name?: string; description?: string; currentUser: RequestUser },
@@ -39,7 +40,7 @@ export class TaskServiceController {
     return this.projectsService.update(id, rest, currentUser);
   }
 
-  @MessagePattern('delete_project')
+  @MessagePattern(ProjectMessagePatterns.DELETE_PROJECT)
   remove(@Payload() data: { id: number; currentUser: RequestUser }) {
     return this.projectsService.remove(data.id, data.currentUser);
   }
