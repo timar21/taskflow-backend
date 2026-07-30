@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
+import { NotificationEventPatterns } from '@app/shared';
 import { Task } from './entities/task.entity';
 import { Project } from './entities/project.entity';
 
@@ -63,7 +64,7 @@ export class TasksService {
         // here should never fail the task creation itself. emit() (not
         // send()) is the event pattern: no reply is expected, unlike the
         // request/response send() calls used for CRUD.
-        this.notificationServiceClient.emit('task_created', {
+        this.notificationServiceClient.emit(NotificationEventPatterns.TASK_CREATED, {
             taskId: savedTask.id,
             title: savedTask.title,
             projectId: project.id,

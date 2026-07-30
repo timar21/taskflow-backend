@@ -1,7 +1,7 @@
 import { Body, Controller, Inject, Post, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { AuthMessagePatterns, RefreshTokenDto } from '@app/shared';
 import { sendRpc } from './send-rpc';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 
@@ -16,17 +16,19 @@ export class GatewayAuthController {
 
     @Post('login')
     async login(@Body() body: { email: string; password: string }) {
-        return sendRpc(this.userServiceClient, 'auth_login', body);
+        return sendRpc(this.userServiceClient, AuthMessagePatterns.LOGIN, body);
     }
 
     @Post('refresh')
     async refresh(@Body() body: RefreshTokenDto) {
-        return sendRpc(this.userServiceClient, 'auth_refresh', { refreshToken: body.refreshToken });
+        return sendRpc(this.userServiceClient, AuthMessagePatterns.REFRESH, {
+            refreshToken: body.refreshToken,
+        });
     }
 
     @UseGuards(JwtAuthGuard)
     @Post('logout')
     async logout(@CurrentUser() user: { id: number }) {
-        return sendRpc(this.userServiceClient, 'auth_logout', { userId: user.id });
+        return sendRpc(this.userServiceClient, AuthMessagePatterns.LOGOUT, { userId: user.id });
     }
 }
