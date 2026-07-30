@@ -1,37 +1,34 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { UserMessagePatterns, CreateUserDto } from '@app/shared';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
 
-// Each @MessagePattern here is the RabbitMQ equivalent of an HTTP route —
-// the gateway sends a message with this exact string tag, this method
-// runs, and whatever it returns (or throws) travels back as the reply.
 @Controller()
 export class UserServiceController {
   constructor(private readonly usersService: UsersService) { }
 
-  @MessagePattern('find_all_users')
+  @MessagePattern(UserMessagePatterns.FIND_ALL_USERS)
   findAll() {
     return this.usersService.findAll();
   }
 
-  @MessagePattern('find_user_by_id')
+  @MessagePattern(UserMessagePatterns.FIND_USER_BY_ID)
   findOne(@Payload() data: { id: number }) {
     return this.usersService.findOne(data.id);
   }
 
-  @MessagePattern('create_user')
+  @MessagePattern(UserMessagePatterns.CREATE_USER)
   create(@Payload() data: CreateUserDto) {
     return this.usersService.create(data);
   }
 
-  @MessagePattern('update_user')
+  @MessagePattern(UserMessagePatterns.UPDATE_USER)
   update(@Payload() data: { id: number; name?: string; email?: string }) {
     const { id, ...rest } = data;
     return this.usersService.update(id, rest);
   }
 
-  @MessagePattern('delete_user')
+  @MessagePattern(UserMessagePatterns.DELETE_USER)
   remove(@Payload() data: { id: number }) {
     return this.usersService.remove(data.id);
   }

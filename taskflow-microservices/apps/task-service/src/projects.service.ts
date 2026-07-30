@@ -1,9 +1,10 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { RequestUser } from '@app/shared';
 import { Project } from './entities/project.entity';
 
-export type RequestUser = { id: number; role: string };
+
 
 // Core CRUD + ownership logic, migrated from the monolith's ProjectsService.
 // Left out for this first pass: Redis caching, pagination, sorting, and

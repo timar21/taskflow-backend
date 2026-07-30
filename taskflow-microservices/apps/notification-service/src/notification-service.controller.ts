@@ -1,5 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
+import { NotificationEventPatterns } from '@app/shared';
 
 interface TaskCreatedEvent {
   taskId: number;
@@ -16,7 +17,7 @@ interface TaskCreatedEvent {
 export class NotificationServiceController {
   private readonly logger = new Logger(NotificationServiceController.name);
 
-  @EventPattern('task_created')
+  @EventPattern(NotificationEventPatterns.TASK_CREATED)
   handleTaskCreated(@Payload() data: TaskCreatedEvent) {
     if (data.assignedUserId) {
       this.logger.log(

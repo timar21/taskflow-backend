@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { QueueNames, buildDeadLetterQueueOptions } from '@app/shared';
 import { TaskServiceController } from './task-service.controller';
 import { TasksMessageController } from './tasks.controller';
 import { ProjectsService } from './projects.service';
@@ -30,25 +31,14 @@ import { Task } from './entities/task.entity';
       }),
     }),
     TypeOrmModule.forFeature([Project, Task]),
-    // Outgoing client used only to emit('task_created', ...) — fire and
-    // forget, no reply expected, so this is a producer, not a request/reply
-    // client like USER_SERVICE/TASK_SERVICE are in the gateway.
     ClientsModule.register([
       {
         name: 'NOTIFICATION_SERVICE',
         transport: Transport.RMQ,
         options: {
           urls: ['amqp://localhost:5672'],
-          queue: 'notification_queue',
-          // Must match notification-service's own queue arguments — see the
-          // matching note in gateway.module.ts.
-          queueOptions: {
-            durable: false,
-            arguments: {
-              'x-dead-letter-exchange': 'dlx',
-              'x-dead-letter-routing-key': 'notification_queue.dead',
-            },
-          },
+          queue: QueueNames.NOTIFICATION_QUEUE,
+          queueOptions: buildDeadLetterQueueOptions(QueueNames.NOTIFICATION_QUEUE),
         },
       },
     ]),
