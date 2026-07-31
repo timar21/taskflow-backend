@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { Transport, MicroserviceOptions } from '@nestjs/microservices';
-import { QueueNames, buildDeadLetterQueueOptions } from '@app/shared';
+import { QueueNames, buildDeadLetterQueueOptions, getRabbitMqUrl } from '@app/shared';
 import { UserServiceModule } from './user-service.module';
 import { RpcExceptionFilter } from './rpc-exception.filter';
 import { RmqAckInterceptor } from './rmq-ack.interceptor';
@@ -15,7 +15,7 @@ async function bootstrap() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(UserServiceModule, {
     transport: Transport.RMQ,
     options: {
-      urls: ['amqp://localhost:5672'],
+      urls: [getRabbitMqUrl()],
       queue: QUEUE_NAME,
       noAck: false,
       queueOptions: buildDeadLetterQueueOptions(QUEUE_NAME),

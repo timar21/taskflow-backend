@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { QueueNames, buildDeadLetterQueueOptions } from '@app/shared';
+import { QueueNames, buildDeadLetterQueueOptions, getRabbitMqUrl } from '@app/shared';
 import { TaskServiceController } from './task-service.controller';
 import { TasksMessageController } from './tasks.controller';
 import { ProjectsService } from './projects.service';
@@ -36,7 +36,7 @@ import { Task } from './entities/task.entity';
         name: 'NOTIFICATION_SERVICE',
         transport: Transport.RMQ,
         options: {
-          urls: ['amqp://localhost:5672'],
+          urls: [getRabbitMqUrl()],
           queue: QueueNames.NOTIFICATION_QUEUE,
           queueOptions: buildDeadLetterQueueOptions(QueueNames.NOTIFICATION_QUEUE),
         },

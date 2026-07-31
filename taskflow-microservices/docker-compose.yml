@@ -1,0 +1,120 @@
+version: "3.9"
+
+services:
+  # --- Infrastructure ---
+  # RabbitMQ is NOT managed by Compose — it runs as your existing standalone
+  # "taskflow-rabbitmq" container (docker start taskflow-rabbitmq), reached
+  # via host.docker.internal below. This sidesteps a known Docker Desktop /
+  # Windows issue where the official rabbitmq image's baked-in data volume
+  # crashes on startup with an .erlang.cookie permission error.
+
+  postgres-user:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: timar21
+      POSTGRES_DB: user_db
+    volumes:
+      - postgres-user-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-task:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: timar21
+      POSTGRES_DB: task_db
+    volumes:
+      - postgres-task-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # --- Application services ---
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: user-service
+    environment:
+      DB_HOST: postgres-user
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: timar21
+      DB_NAME: user_db
+      JWT_SECRET: myjwtsecretkey456
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: myjwtrefreshsecretkey789
+      JWT_REFRESH_EXPIRES_IN: 7d
+      RABBITMQ_URL: amqp://host.docker.internal:5672
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+
+  task-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: task-service
+    environment:
+      DB_HOST: postgres-task
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: timar21
+      DB_NAME: task_db
+      RABBITMQ_URL: amqp://host.docker.internal:5672
+    depends_on:
+      postgres-task:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: notification-service
+    environment:
+      RABBITMQ_URL: amqp://host.docker.internal:5672
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: gateway
+    environment:
+      PORT: 3000
+      JWT_SECRET: myjwtsecretkey456
+      RABBITMQ_URL: amqp://host.docker.internal:5672
+    ports:
+      - "3000:3000"
+    depends_on:
+      user-service:
+        condition: service_started
+      task-service:
+        condition: service_started
+
+volumes:
+  postgres-user-data:
+  postgres-task-data:

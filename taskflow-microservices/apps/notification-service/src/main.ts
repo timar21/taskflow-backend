@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { Transport, MicroserviceOptions } from '@nestjs/microservices';
-import { QueueNames, buildDeadLetterQueueOptions } from '@app/shared';
+import { QueueNames, buildDeadLetterQueueOptions, getRabbitMqUrl } from '@app/shared';
 import { NotificationServiceModule } from './notification-service.module';
 import { RmqAckInterceptor } from './rmq-ack.interceptor';
 import { setupDeadLetterQueue } from './setup-rabbitmq-topology';
@@ -13,7 +13,7 @@ async function bootstrap() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(NotificationServiceModule, {
     transport: Transport.RMQ,
     options: {
-      urls: ['amqp://localhost:5672'],
+      urls: [getRabbitMqUrl()],
       queue: QUEUE_NAME,
       noAck: false,
       queueOptions: buildDeadLetterQueueOptions(QUEUE_NAME),

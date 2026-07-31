@@ -5,3 +5,5 @@ export * from './dto/refresh-token.dto';
 export * from './interfaces/request-user.interface';
 export * from './constants/message-patterns';
 export * from './constants/queue-names';
+export * from './constants/rabbitmq-url';
+export * from './dto/login.dto';
