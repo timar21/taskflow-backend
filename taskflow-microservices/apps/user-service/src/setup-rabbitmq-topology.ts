@@ -1,5 +1,5 @@
 import * as amqp from 'amqplib';
-
+import { getRabbitMqUrl } from '@app/shared';
 // RabbitMQ won't dead-letter a message into thin air — the dead-letter
 // exchange and the dead-letter queue bound to it both have to exist BEFORE
 // any message tries to route there, or a rejected message is just silently
@@ -7,7 +7,7 @@ import * as amqp from 'amqplib';
 // since NestJS's microservice transport only ever asserts the one queue it
 // actually listens on.
 export async function setupDeadLetterQueue(mainQueueName: string): Promise<void> {
-    const connection = await amqp.connect('amqp://localhost:5672');
+    const connection = await amqp.connect(getRabbitMqUrl());
     const channel = await connection.createChannel();
 
     const dlxExchange = 'dlx';
